@@ -179,18 +179,18 @@ def main():
         
         with tab1:
             if login_page():
-                st.experimental_rerun()
+                st.rerun()
         
         with tab2:
             if register_page():
-                st.experimental_rerun()
+                st.rerun()
     else:
         st.title(f"🍽️ 혼밥메이트 - 환영합니다, {st.session_state.username}님!")
         
         # 로그아웃 버튼
         if st.sidebar.button("로그아웃"):
             st.session_state.user_id = None
-            st.experimental_rerun()
+            st.rerun()
         
         # 사이드바 메뉴
         menu = st.sidebar.selectbox(
