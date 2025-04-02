@@ -7,8 +7,15 @@ from pathlib import Path
 import json
 import os
 from dotenv import load_dotenv
-from streamlit_webrtc import webrtc_streamer
-import cv2
+
+# 조건부 임포트 - 웹캠/화상 기능 필요한 라이브러리
+try:
+    from streamlit_webrtc import webrtc_streamer
+    import cv2
+    webrtc_available = True
+except ImportError:
+    webrtc_available = False
+
 from PIL import Image
 import random
 
@@ -344,13 +351,14 @@ def show_emotional_management():
     
     # 화상 통화 기능
     st.subheader("화상 상담")
-    webrtc_streamer(
-        key="emotion_chat",
-        video_frame_callback=None,
-        rtc_configuration={
-            "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
-        }
-    )
+    if webrtc_available:
+        webrtc_streamer(
+            key="emotion_chat",
+            video_frame_callback=None
+        )
+    else:
+        st.error("화상 통화 기능을 사용할 수 없습니다. streamlit-webrtc와 OpenCV(cv2) 패키지가 필요합니다.")
+        st.info("설치 방법: pip install streamlit-webrtc opencv-python")
     
     # 긍정적 활동 추천
     st.subheader("추천 활동")
