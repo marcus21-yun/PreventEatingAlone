@@ -244,6 +244,32 @@ def show_home():
 def show_meal_record():
     st.header("식사 기록")
     
+    # 이미지 미리보기 및 분석 영역을 폼 밖으로 이동
+    meal_photo = st.file_uploader("식사 사진", type=['jpg', 'jpeg', 'png'])
+    
+    # 미리보기 및 분석 정보 표시
+    if meal_photo is not None:
+        # 이미지 표시
+        image = Image.open(meal_photo)
+        st.image(image, caption="업로드된 식사 사진", use_column_width=True)
+        
+        # 음식 분석 결과 (예시)
+        if webrtc_available and cv2 is not None:
+            st.subheader("음식 분석 결과")
+            # 분석 결과 예시 (실제로는 ML 모델 등으로 분석)
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("예상 칼로리", "450 kcal")
+                st.metric("단백질", "15g")
+            with col2:
+                st.metric("탄수화물", "65g") 
+                st.metric("지방", "12g")
+            
+            # 분석 결과에 따른 코멘트
+            st.info("균형 잡힌 식사입니다. 단백질 섭취가 더 필요할 수 있습니다.")
+        else:
+            st.warning("이미지 분석 기능을 사용할 수 없습니다. OpenCV(cv2) 패키지가 필요합니다.")
+    
     with st.form("meal_record"):
         col1, col2 = st.columns(2)
         
@@ -257,7 +283,6 @@ def show_meal_record():
             mood = st.slider("식사 시 기분", 1, 5, 3)
             
         meal_content = st.text_area("식사 내용")
-        meal_photo = st.file_uploader("식사 사진", type=['jpg', 'jpeg', 'png'])
         
         submitted = st.form_submit_button("기록하기")
         
@@ -271,8 +296,24 @@ def show_meal_record():
                 "location": meal_location,
                 "mood": mood,
                 "content": meal_content,
+                "has_photo": meal_photo is not None,
                 "created_at": datetime.now().isoformat()
             }
+            
+            # 이미지 저장 (옵션)
+            if meal_photo is not None:
+                # 이미지 폴더 생성
+                img_dir = DATA_DIR / "images"
+                img_dir.mkdir(exist_ok=True)
+                
+                # 이미지 저장
+                img_path = f"meal_{meal_data['id']}_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
+                img_full_path = img_dir / img_path
+                
+                with open(img_full_path, "wb") as f:
+                    f.write(meal_photo.getbuffer())
+                
+                meal_data["photo_path"] = str(img_path)
             
             meals = load_meals()
             meals.append(meal_data)
