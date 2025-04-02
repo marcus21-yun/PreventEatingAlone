@@ -249,9 +249,9 @@ def show_meal_record():
     
     # 미리보기 및 분석 정보 표시
     if meal_photo is not None:
-        # 이미지 표시
+        # 이미지 표시 (use_column_width 대신 use_container_width 사용)
         image = Image.open(meal_photo)
-        st.image(image, caption="업로드된 식사 사진", use_column_width=True)
+        st.image(image, caption="업로드된 식사 사진", use_container_width=True)
         
         # 음식 분석 결과 (예시)
         if webrtc_available and cv2 is not None:
@@ -268,7 +268,20 @@ def show_meal_record():
             # 분석 결과에 따른 코멘트
             st.info("균형 잡힌 식사입니다. 단백질 섭취가 더 필요할 수 있습니다.")
         else:
-            st.warning("이미지 분석 기능을 사용할 수 없습니다. OpenCV(cv2) 패키지가 필요합니다.")
+            # 더 나은 사용자 경험을 위해 기본 분석 제공
+            st.subheader("기본 음식 분석")
+            st.warning("상세 이미지 분석을 위해서는 OpenCV(cv2) 패키지가 필요합니다.")
+            
+            # 기본 예상 정보 제공
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("예상 칼로리", "300-500 kcal")
+                st.metric("단백질", "10-20g")
+            with col2:
+                st.metric("탄수화물", "40-60g") 
+                st.metric("지방", "10-15g")
+            
+            st.info("참고: 이 정보는 OpenCV 없이 제공되는 기본 추정치입니다. 정확한 분석을 위해 'pip install opencv-python'을 실행하여 OpenCV를 설치하세요.")
     
     with st.form("meal_record"):
         col1, col2 = st.columns(2)
@@ -388,7 +401,7 @@ def show_emotional_management():
     # 정서 안정성 이미지
     st.subheader("오늘의 마음 상태")
     emotional_image = get_random_emotional_image()
-    st.image(emotional_image, caption="당신의 마음을 진정시키는 이미지", use_column_width=True)
+    st.image(emotional_image, caption="당신의 마음을 진정시키는 이미지", use_container_width=True)
     
     # 화상 통화 기능
     st.subheader("화상 상담")
