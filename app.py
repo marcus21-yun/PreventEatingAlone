@@ -169,6 +169,62 @@ def get_random_emotional_image():
     ]
     return random.choice(images)
 
+# 음식 인식 및 분석을 위한 함수 추가
+def analyze_food_image(image):
+    """
+    OpenCV를 사용하여 음식 이미지를 분석하고 음식 종류와 영양소 정보를 반환합니다.
+    실제 상용 시스템에서는 ML 모델을 사용하지만, 여기서는 이미지 특성을 기반으로 단순 분류합니다.
+    """
+    if cv2 is not None:
+        # PIL 이미지를 OpenCV 형식으로 변환
+        img_array = np.array(image)
+        img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+        
+        # 이미지 특성 추출을 위한 처리
+        avg_color = np.mean(img_cv, axis=(0, 1))
+        hsv_img = cv2.cvtColor(img_cv, cv2.COLOR_BGR2HSV)
+        avg_hsv = np.mean(hsv_img, axis=(0, 1))
+        
+        # 색상 기반 단순 분류 
+        # 실제 프로젝트에서는 CNN 등의 ML 모델을 사용해야 함
+        h_value = avg_hsv[0]
+        s_value = avg_hsv[1]
+        v_value = avg_hsv[2]
+        
+        # 간단한 색상 기반 분류
+        foods = [
+            {"name": "샐러드", "calories": 120, "protein": 5, "carbs": 15, "fat": 3},
+            {"name": "구운 고기", "calories": 350, "protein": 35, "carbs": 0, "fat": 22},
+            {"name": "파스타", "calories": 380, "protein": 12, "carbs": 70, "fat": 10},
+            {"name": "국/찌개", "calories": 250, "protein": 18, "carbs": 20, "fat": 12},
+            {"name": "김밥/초밥", "calories": 320, "protein": 10, "carbs": 60, "fat": 8},
+            {"name": "과일", "calories": 100, "protein": 1, "carbs": 25, "fat": 0}
+        ]
+        
+        # 색상, 채도, 명도를 기반으로 음식 종류 결정
+        # 실제 구현에서는 더 정교한 알고리즘이 필요함
+        if 20 <= h_value <= 40 and s_value > 100:  # 갈색/노란색 계열
+            if v_value > 150:
+                return foods[2]  # 파스타
+            else:
+                return foods[1]  # 구운 고기
+        elif h_value < 20 and s_value < 80:  # 붉은색 계열, 낮은 채도
+            return foods[3]  # 국/찌개
+        elif 40 <= h_value <= 80:  # 녹색/황색 계열
+            if s_value > 100:
+                return foods[0]  # 샐러드
+            else:
+                return foods[5]  # 과일
+        elif 0 <= h_value <= 30 and 60 <= s_value <= 150:
+            return foods[4]  # 김밥/초밥
+        else:
+            # 위의 조건에 맞지 않으면 랜덤하게 음식 선택
+            idx = int(h_value) % len(foods)
+            return foods[idx]
+    
+    # OpenCV를 사용할 수 없는 경우
+    return None
+
 # 메인 페이지
 def main():
     if "user_id" not in st.session_state:
@@ -247,26 +303,46 @@ def show_meal_record():
     # 이미지 미리보기 및 분석 영역을 폼 밖으로 이동
     meal_photo = st.file_uploader("식사 사진", type=['jpg', 'jpeg', 'png'])
     
+    # 분석 결과 저장용 변수
+    food_analysis = None
+    
     # 미리보기 및 분석 정보 표시
     if meal_photo is not None:
         # 이미지 표시 (use_column_width 대신 use_container_width 사용)
         image = Image.open(meal_photo)
         st.image(image, caption="업로드된 식사 사진", use_container_width=True)
         
-        # 음식 분석 결과 (예시)
+        # 음식 분석 결과
         if webrtc_available and cv2 is not None:
             st.subheader("음식 분석 결과")
-            # 분석 결과 예시 (실제로는 ML 모델 등으로 분석)
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("예상 칼로리", "450 kcal")
-                st.metric("단백질", "15g")
-            with col2:
-                st.metric("탄수화물", "65g") 
-                st.metric("지방", "12g")
             
-            # 분석 결과에 따른 코멘트
-            st.info("균형 잡힌 식사입니다. 단백질 섭취가 더 필요할 수 있습니다.")
+            # 음식 인식 실행
+            food_analysis = analyze_food_image(image)
+            
+            if food_analysis:
+                # 인식된 음식 정보 표시
+                st.success(f"인식된 음식: {food_analysis['name']}")
+                
+                # 분석 결과 표시
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("예상 칼로리", f"{food_analysis['calories']} kcal")
+                    st.metric("단백질", f"{food_analysis['protein']}g")
+                with col2:
+                    st.metric("탄수화물", f"{food_analysis['carbs']}g") 
+                    st.metric("지방", f"{food_analysis['fat']}g")
+                
+                # 분석 결과에 따른 맞춤형 코멘트
+                if food_analysis['protein'] > 20:
+                    st.info("단백질이 풍부한 식사입니다. 근육 발달과 포만감 유지에 좋습니다.")
+                elif food_analysis['carbs'] > 50:
+                    st.info("탄수화물이 많은 식사입니다. 에너지원으로 좋지만, 과다 섭취는 피하세요.")
+                elif food_analysis['fat'] > 15:
+                    st.info("지방 함량이 높은 식사입니다. 소화에 시간이 더 걸릴 수 있습니다.")
+                else:
+                    st.info("균형 잡힌 식사로 보입니다. 다양한 영양소를 골고루 섭취하세요.")
+            else:
+                st.warning("음식을 인식하지 못했습니다. 다른 사진을 시도해보세요.")
         else:
             # 더 나은 사용자 경험을 위해 기본 분석 제공
             st.subheader("기본 음식 분석")
@@ -312,6 +388,14 @@ def show_meal_record():
                 "has_photo": meal_photo is not None,
                 "created_at": datetime.now().isoformat()
             }
+            
+            # 음식 분석 결과가 있으면 추가
+            if food_analysis:
+                meal_data["food_type"] = food_analysis["name"]
+                meal_data["calories"] = food_analysis["calories"]
+                meal_data["protein"] = food_analysis["protein"]
+                meal_data["carbs"] = food_analysis["carbs"]
+                meal_data["fat"] = food_analysis["fat"]
             
             # 이미지 저장 (옵션)
             if meal_photo is not None:
